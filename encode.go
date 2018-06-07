@@ -7,11 +7,14 @@
 package stablegob
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"math/bits"
 	"reflect"
+	"sort"
 	"sync"
 )
 
@@ -369,10 +372,37 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 	state.fieldnum = -1
 	state.sendZero = true
 	keys := mv.MapKeys()
-	state.encodeUint(uint64(len(keys)))
+
+	type t struct {
+		value reflect.Value
+		bytes []byte
+	}
+	var encoded []t
+
+	// first encode all the keys into a buffer
 	for _, key := range keys {
-		encodeReflectValue(state, key, keyOp, keyIndir)
-		encodeReflectValue(state, mv.MapIndex(key), elemOp, elemIndir)
+		var keyBuf = new(encBuffer)
+		keyState := enc.newEncoderState(keyBuf)
+		encodeReflectValue(keyState, key, keyOp, keyIndir)
+		val := t{key, keyBuf.Bytes()}
+		encoded = append(encoded, val)
+	}
+
+	// then sort the keys based on the encoded bytes
+	sort.Slice(encoded, func(i, j int) bool {
+		result := bytes.Compare(encoded[i].bytes, encoded[j].bytes)
+		if result == 0 {
+			panic(fmt.Sprintf("two keys encoded to the same []byte: %v = %v, %v = %v", encoded[i].value, encoded[i].bytes, encoded[j].value, encoded[j].bytes))
+		}
+		return result == 1
+	})
+
+	state.encodeUint(uint64(len(keys)))
+	for _, key := range encoded {
+		if _, err := b.Write(key.bytes); err != nil {
+			panic(err)
+		}
+		encodeReflectValue(state, mv.MapIndex(key.value), elemOp, elemIndir)
 	}
 	enc.freeEncoderState(state)
 }
