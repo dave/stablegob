@@ -379,13 +379,14 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 	}
 	var encoded []t
 
+	var keyBuf = new(encBuffer)
+	keyState := enc.newEncoderState(keyBuf)
+
 	// first encode all the keys into a buffer
 	for _, key := range keys {
-		var keyBuf = new(encBuffer)
-		keyState := enc.newEncoderState(keyBuf)
+		keyBuf.Reset()
 		encodeReflectValue(keyState, key, keyOp, keyIndir)
-		val := t{key, keyBuf.Bytes()}
-		encoded = append(encoded, val)
+		encoded = append(encoded, t{key, append([]byte(nil), keyBuf.Bytes()...)})
 	}
 
 	// then sort the keys based on the encoded bytes
