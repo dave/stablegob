@@ -4,7 +4,7 @@
 
 //go:generate go run encgen.go -output enc_helpers.go
 
-package gob
+package stablegob
 
 import (
 	"encoding"

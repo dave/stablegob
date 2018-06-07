@@ -6,13 +6,14 @@
 
 package main
 
-// Need to compile package gob with debug.go to build this program.
+// Need to compile package stablegob with debug.go to build this program.
 // See comments in debug.go for how to do this.
 
 import (
-	"encoding/gob"
 	"fmt"
 	"os"
+
+	"github.com/dave/stablegob"
 )
 
 func main() {
@@ -25,5 +26,5 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	gob.Debug(file)
+	stablegob.Debug(file)
 }

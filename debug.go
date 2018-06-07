@@ -5,7 +5,7 @@
 // Delete the next line to include in the gob package.
 // +build ignore
 
-package gob
+package stablegob
 
 // This file is not normally included in the gob package. Used only for debugging the package itself.
 // Except for reading uints, it is an implementation of a reader that is independent of

@@ -4,7 +4,7 @@
 
 // This file contains tests of the GobEncoder/GobDecoder support.
 
-package gob
+package stablegob
 
 import (
 	"bytes"

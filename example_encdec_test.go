@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package gob_test
+package stablegob_test
 
 import (
 	"bytes"
-	"encoding/gob"
 	"fmt"
 	"log"
+
+	"github.com/dave/stablegob"
 )
 
 // The Vector type has unexported fields, which the package cannot access.
@@ -41,14 +42,14 @@ func Example_encodeDecode() {
 	var network bytes.Buffer // Stand-in for the network.
 
 	// Create an encoder and send a value.
-	enc := gob.NewEncoder(&network)
+	enc := stablegob.NewEncoder(&network)
 	err := enc.Encode(Vector{3, 4, 5})
 	if err != nil {
 		log.Fatal("encode:", err)
 	}
 
 	// Create a decoder and receive a value.
-	dec := gob.NewDecoder(&network)
+	dec := stablegob.NewDecoder(&network)
 	var v Vector
 	err = dec.Decode(&v)
 	if err != nil {

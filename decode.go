@@ -4,7 +4,7 @@
 
 //go:generate go run decgen.go -output dec_helpers.go
 
-package gob
+package stablegob
 
 import (
 	"encoding"

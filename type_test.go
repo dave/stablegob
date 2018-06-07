@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package gob
+package stablegob
 
 import (
 	"bytes"
@@ -171,8 +171,8 @@ func TestRegistrationNaming(t *testing.T) {
 		t    interface{}
 		name string
 	}{
-		{&N1{}, "*gob.N1"},
-		{N2{}, "encoding/gob.N2"},
+		{&N1{}, "*stablegob.N1"},
+		{N2{}, "github.com/dave/stablegob.N2"},
 	}
 
 	for _, tc := range testCases {

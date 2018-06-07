@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package gob
+package stablegob
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var doFuzzTests = flag.Bool("gob.fuzz", false, "run the fuzz tests, which are large and very slow")
+var doFuzzTests = flag.Bool("stablegob.fuzz", false, "run the fuzz tests, which are large and very slow")
 
 // Guarantee encoding format by comparing some encodings to hand-written values
 type EncodeT struct {
@@ -1421,7 +1421,7 @@ func encFuzzDec(rng *rand.Rand, in interface{}) error {
 // This does some "fuzz testing" by attempting to decode a sequence of random bytes.
 func TestFuzz(t *testing.T) {
 	if !*doFuzzTests {
-		t.Logf("disabled; run with -gob.fuzz to enable")
+		t.Logf("disabled; run with -stablegob.fuzz to enable")
 		return
 	}
 
@@ -1441,7 +1441,7 @@ func TestFuzz(t *testing.T) {
 
 func TestFuzzRegressions(t *testing.T) {
 	if !*doFuzzTests {
-		t.Logf("disabled; run with -gob.fuzz to enable")
+		t.Logf("disabled; run with -stablegob.fuzz to enable")
 		return
 	}
 

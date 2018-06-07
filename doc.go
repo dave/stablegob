@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 /*
-Package gob manages streams of gobs - binary values exchanged between an
+package stablegob manages streams of gobs - binary values exchanged between an
 Encoder (transmitter) and a Decoder (receiver). A typical use is transporting
 arguments and results of remote procedure calls (RPCs) such as those provided by
 package "net/rpc".
@@ -270,7 +270,7 @@ document for background: https://golang.org/doc/go1compat
 See "Gobs of data" for a design discussion of the gob wire format:
 https://blog.golang.org/gobs-of-data
 */
-package gob
+package stablegob
 
 /*
 Grammar:
