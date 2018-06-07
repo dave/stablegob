@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/binary"
-	"fmt"
 	"math"
 	"math/bits"
 	"reflect"
@@ -366,42 +365,41 @@ func encodeReflectValue(state *encoderState, v reflect.Value, op encOp, indir in
 	op(nil, state, v)
 }
 
+type valueAndBytes struct {
+	value reflect.Value
+	bytes []byte
+}
+
 // encodeMap encodes a map as unsigned count followed by key:value pairs.
 func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encOp, keyIndir, elemIndir int) {
 	state := enc.newEncoderState(b)
 	state.fieldnum = -1
 	state.sendZero = true
-	keys := mv.MapKeys()
-
-	type t struct {
-		value reflect.Value
-		bytes []byte
-	}
-	var encoded []t
-
-	var keyBuf = new(encBuffer)
+	keyValues := mv.MapKeys()
+	keyBuf := &encBuffer{}
 	keyState := enc.newEncoderState(keyBuf)
 
-	// first encode all the keys into a buffer
-	for _, key := range keys {
+	// encode the keys and buffer the results
+	var keys []valueAndBytes
+	for _, key := range keyValues {
 		keyBuf.Reset()
 		encodeReflectValue(keyState, key, keyOp, keyIndir)
-		encoded = append(encoded, t{key, append([]byte(nil), keyBuf.Bytes()...)})
+		keys = append(keys, valueAndBytes{key, append([]byte(nil), keyBuf.Bytes()...)})
 	}
 
-	// then sort the keys based on the encoded bytes
-	sort.Slice(encoded, func(i, j int) bool {
-		result := bytes.Compare(encoded[i].bytes, encoded[j].bytes)
+	// sort the keys based on the encoded bytes
+	sort.Slice(keys, func(i, j int) bool {
+		result := bytes.Compare(keys[i].bytes, keys[j].bytes)
 		if result == 0 {
-			panic(fmt.Sprintf("two keys encoded to the same []byte: %v = %v, %v = %v", encoded[i].value, encoded[i].bytes, encoded[j].value, encoded[j].bytes))
+			errorf("two keys encoded to the same []byte: %v = %v, %v = %v", keys[i].value, keys[i].bytes, keys[j].value, keys[j].bytes)
 		}
 		return result == 1
 	})
 
-	state.encodeUint(uint64(len(keys)))
-	for _, key := range encoded {
+	state.encodeUint(uint64(len(keyValues)))
+	for _, key := range keys {
 		if _, err := b.Write(key.bytes); err != nil {
-			panic(err)
+			error_(err)
 		}
 		encodeReflectValue(state, mv.MapIndex(key.value), elemOp, elemIndir)
 	}
