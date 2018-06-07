@@ -277,6 +277,15 @@ func encAndDec(in, out interface{}) error {
 	if err != nil {
 		return err
 	}
+	for i := 0; i < 5; i++ {
+		b1 := new(bytes.Buffer)
+		if err := NewEncoder(b1).Encode(in); err != nil {
+			return err
+		}
+		if bytes.Compare(b.Bytes(), b1.Bytes()) != 0 {
+			return fmt.Errorf("unstable with value %v", in)
+		}
+	}
 	dec := NewDecoder(b)
 	err = dec.Decode(out)
 	if err != nil {
