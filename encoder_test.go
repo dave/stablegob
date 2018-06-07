@@ -43,6 +43,9 @@ func TestBasicEncoderDecoder(t *testing.T) {
 		if err != nil {
 			t.Error("encoder fail:", err)
 		}
+		if err := checkStable(value); err != nil {
+			t.Fatal(err)
+		}
 		dec := NewDecoder(b)
 		result := reflect.New(reflect.TypeOf(value))
 		err = dec.Decode(result.Interface())
@@ -67,6 +70,10 @@ func TestEncodeIntSlice(t *testing.T) {
 		enc := NewEncoder(&sink)
 		enc.Encode(s8)
 
+		if err := checkStable(s8); err != nil {
+			t.Fatal(err)
+		}
+
 		dec := NewDecoder(&sink)
 		res := make([]int8, 9)
 		dec.Decode(&res)
@@ -80,6 +87,10 @@ func TestEncodeIntSlice(t *testing.T) {
 		var sink bytes.Buffer
 		enc := NewEncoder(&sink)
 		enc.Encode(s16)
+
+		if err := checkStable(s16); err != nil {
+			t.Fatal(err)
+		}
 
 		dec := NewDecoder(&sink)
 		res := make([]int16, 9)
@@ -95,6 +106,10 @@ func TestEncodeIntSlice(t *testing.T) {
 		enc := NewEncoder(&sink)
 		enc.Encode(s32)
 
+		if err := checkStable(s32); err != nil {
+			t.Fatal(err)
+		}
+
 		dec := NewDecoder(&sink)
 		res := make([]int32, 9)
 		dec.Decode(&res)
@@ -108,6 +123,10 @@ func TestEncodeIntSlice(t *testing.T) {
 		var sink bytes.Buffer
 		enc := NewEncoder(&sink)
 		enc.Encode(s64)
+
+		if err := checkStable(s64); err != nil {
+			t.Fatal(err)
+		}
 
 		dec := NewDecoder(&sink)
 		res := make([]int64, 9)
@@ -159,6 +178,11 @@ func TestEncoderDecoder(t *testing.T) {
 	if err != nil {
 		t.Error("encoder fail:", err)
 	}
+
+	if err := checkStable(et0); err != nil {
+		t.Fatal(err)
+	}
+
 	//fmt.Printf("% x %q\n", b, b)
 	//Debug(b)
 	dec := NewDecoder(b)
@@ -185,6 +209,11 @@ func TestEncoderDecoder(t *testing.T) {
 	if err != nil {
 		t.Error("encoder fail:", err)
 	}
+
+	if err := checkStable(et1); err != nil {
+		t.Fatal(err)
+	}
+
 	dec = NewDecoder(b)
 	newEt1 := new(ET1)
 	err = dec.Decode(newEt1)
@@ -270,6 +299,21 @@ func TestUnsupported(t *testing.T) {
 	}
 }
 
+func checkStable(in interface{}) error {
+	var last []byte
+	for i := 0; i < 10; i++ {
+		b := new(bytes.Buffer)
+		if err := NewEncoder(b).Encode(in); err != nil {
+			return err
+		}
+		if i > 0 && bytes.Compare(last, b.Bytes()) != 0 {
+			return fmt.Errorf("unstable with value %v", in)
+		}
+		last = b.Bytes()
+	}
+	return nil
+}
+
 func encAndDec(in, out interface{}) error {
 	b := new(bytes.Buffer)
 	enc := NewEncoder(b)
@@ -277,14 +321,8 @@ func encAndDec(in, out interface{}) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < 5; i++ {
-		b1 := new(bytes.Buffer)
-		if err := NewEncoder(b1).Encode(in); err != nil {
-			return err
-		}
-		if bytes.Compare(b.Bytes(), b1.Bytes()) != 0 {
-			return fmt.Errorf("unstable with value %v", in)
-		}
+	if err := checkStable(in); err != nil {
+		return err
 	}
 	dec := NewDecoder(b)
 	err = dec.Decode(out)
@@ -454,6 +492,11 @@ func TestSingletons(t *testing.T) {
 			t.Errorf("error encoding %v: %s", test.in, err)
 			continue
 		}
+
+		if err := checkStable(test.in); err != nil {
+			t.Fatal(err)
+		}
+
 		err = dec.Decode(test.out)
 		switch {
 		case err != nil && test.err == "":
@@ -526,6 +569,10 @@ func TestInterfaceIndirect(t *testing.T) {
 		t.Fatal("encode error:", err)
 	}
 
+	if err := checkStable(w); err != nil {
+		t.Fatal(err)
+	}
+
 	var r []interfaceIndirectTestI
 	err = NewDecoder(b).Decode(&r)
 	if err != nil {
@@ -579,6 +626,11 @@ func TestDecodeIntoNothing(t *testing.T) {
 			t.Errorf("%d: encode error %s:", i, err)
 			continue
 		}
+
+		if err := checkStable(test.in); err != nil {
+			t.Fatal(err)
+		}
+
 		dec := NewDecoder(b)
 		err = dec.Decode(test.out)
 		if err != nil {
@@ -647,6 +699,11 @@ func TestNestedInterfaces(t *testing.T) {
 	if err != nil {
 		t.Fatal("Encode:", err)
 	}
+
+	if err := checkStable(&v); err != nil {
+		t.Fatal(err)
+	}
+
 	err = d.Decode(&v)
 	if err != nil {
 		t.Fatal("Decode:", err)
@@ -689,6 +746,11 @@ func TestMapBug1(t *testing.T) {
 	if err != nil {
 		t.Fatal("encode:", err)
 	}
+
+	if err := checkStable(in); err != nil {
+		t.Fatal(err)
+	}
+
 	dec := NewDecoder(b)
 	out := make(Bug1StructMap)
 	err = dec.Decode(&out)
@@ -726,6 +788,9 @@ func TestGobMapInterfaceEncode(t *testing.T) {
 	if err != nil {
 		t.Errorf("encode map: %s", err)
 	}
+	if err := checkStable(m); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestSliceReusesMemory(t *testing.T) {
@@ -738,6 +803,11 @@ func TestSliceReusesMemory(t *testing.T) {
 		if err != nil {
 			t.Errorf("bytes: encode: %s", err)
 		}
+
+		if err := checkStable(x); err != nil {
+			t.Fatal(err)
+		}
+
 		// Decode into y, which is big enough.
 		y := []byte("ABCDE")
 		addr := &y[0]
@@ -761,6 +831,11 @@ func TestSliceReusesMemory(t *testing.T) {
 		if err != nil {
 			t.Errorf("ints: encode: %s", err)
 		}
+
+		if err := checkStable(x); err != nil {
+			t.Fatal(err)
+		}
+
 		// Decode into y, which is big enough.
 		y := []rune("ABCDE")
 		addr := &y[0]
@@ -832,6 +907,11 @@ func TestChanFuncIgnored(t *testing.T) {
 	if err := enc.Encode(b0); err != nil {
 		t.Fatal("error encoding:", err)
 	}
+
+	if err := checkStable(b0); err != nil {
+		t.Fatal(err)
+	}
+
 	var b1 Bug2
 	err := NewDecoder(&buf).Decode(&b1)
 	if err != nil {
@@ -870,6 +950,10 @@ func TestGobPtrSlices(t *testing.T) {
 		t.Fatal("encode:", err)
 	}
 
+	if err := checkStable(&in); err != nil {
+		t.Fatal(err)
+	}
+
 	var out []*Bug3
 	err = NewDecoder(b).Decode(&out)
 	if err != nil {
@@ -894,6 +978,11 @@ func TestPtrToMapOfMap(t *testing.T) {
 	if err != nil {
 		t.Fatal("encode:", err)
 	}
+
+	if err := checkStable(data); err != nil {
+		t.Fatal(err)
+	}
+
 	var newData map[string]interface{}
 	err = NewDecoder(b).Decode(&newData)
 	if err != nil {
@@ -1067,6 +1156,10 @@ func Test29ElementSlice(t *testing.T) {
 		return
 	}
 
+	if err := checkStable(src); err != nil {
+		t.Fatal(err)
+	}
+
 	var dst []interface{}
 	err = NewDecoder(buf).Decode(&dst)
 	if err != nil {
@@ -1085,6 +1178,11 @@ func TestErrorForHugeSlice(t *testing.T) {
 	if err != nil {
 		t.Fatal("encode:", err)
 	}
+
+	if err := checkStable(slice); err != nil {
+		t.Fatal(err)
+	}
+
 	// Reach into the buffer and smash the count to make the encoded slice very long.
 	buf.Bytes()[buf.Len()-len(slice)-1] = 0xfa
 	// Decode and see error.
