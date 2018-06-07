@@ -398,9 +398,7 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 
 	state.encodeUint(uint64(len(keyValues)))
 	for _, key := range keys {
-		if _, err := b.Write(key.bytes); err != nil {
-			error_(err)
-		}
+		b.Write(key.bytes)
 		encodeReflectValue(state, mv.MapIndex(key.value), elemOp, elemIndir)
 	}
 	enc.freeEncoderState(state)
