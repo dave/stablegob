@@ -5,3 +5,5 @@ Package stablegob is a fork of the Go standard library encoding/gob package at g
 I've made some minor modifications that mean the binary output is deterministic. Maps are ordered by 
 key. This will have a performance impact, beause the map keys are encoded and buffered before being sorted, 
 then written to the output.  
+
+The binary output is 100% compatible with the standard library gob package.
