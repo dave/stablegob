@@ -376,16 +376,16 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 	state.fieldnum = -1
 	state.sendZero = true
 	keyValues := mv.MapKeys()
-
-	keyBuf := &encBuffer{}
-	keyEnc := NewEncoder(keyBuf) // We need a new encoder to prevent types from being registered in the wrong order
-	keyState := keyEnc.newEncoderState(keyBuf)
+	keyBuf := &bytes.Buffer{}
 
 	// encode the keys and buffer the results
 	var keys []valueAndBytes
 	for _, key := range keyValues {
 		keyBuf.Reset()
-		encodeReflectValue(keyState, key, keyOp, keyIndir)
+		// We need a new encoder each time to prevent types from being registered in the wrong order
+		if err := NewEncoder(keyBuf).EncodeValue(key); err != nil {
+			error_(err)
+		}
 		keys = append(keys, valueAndBytes{key, append([]byte(nil), keyBuf.Bytes()...)})
 	}
 
@@ -393,7 +393,7 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 	sort.Slice(keys, func(i, j int) bool {
 		result := bytes.Compare(keys[i].bytes, keys[j].bytes)
 		if result == 0 {
-			errorf("two keys encoded to the same []byte: %v = %v, %v = %v", keys[i].value, keys[i].bytes, keys[j].value, keys[j].bytes)
+			errorf("two keys encoded to the same []byte: %#v = %v, %#v = %v", keys[i].value.Interface(), keys[i].bytes, keys[j].value.Interface(), keys[j].bytes)
 		}
 		return result == 1
 	})

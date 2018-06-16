@@ -8,15 +8,15 @@ import (
 	"testing"
 )
 
-type A struct{}
-type B struct{}
-type C struct{}
-type D struct{}
-type E struct{}
-type F struct{}
-type G struct{}
-type H struct{}
-type I struct{}
+type A struct{ I int }
+type B struct{ I int }
+type C struct{ I int }
+type D struct{ I int }
+type E struct{ I int }
+type F struct{ I int }
+type G struct{ I int }
+type H struct{ I int }
+type I struct{ I int }
 
 func TestStable(t *testing.T) {
 	Register(A{})
@@ -36,7 +36,6 @@ func TestStable(t *testing.T) {
 		if err := NewEncoder(w).Encode(s); err != nil {
 			t.Fatal(err)
 		}
-		Debug(buf)
 		return fmt.Sprintf("%x", sha.Sum(nil))
 	}
 	if run() != run() {
