@@ -33,11 +33,10 @@ func TestStable(t *testing.T) {
 		buf := &bytes.Buffer{}
 		sha := sha1.New()
 		w := io.MultiWriter(buf, sha)
-		enc := NewEncoder(w)
-		if err := enc.Encode(s); err != nil {
+		if err := NewEncoder(w).Encode(s); err != nil {
 			t.Fatal(err)
 		}
-		Debug(enc, buf)
+		Debug(buf)
 		return fmt.Sprintf("%x", sha.Sum(nil))
 	}
 	if run() != run() {
