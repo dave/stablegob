@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 // Delete the next line to include in the gob package.
-// +build ignore
 
 package stablegob
 
@@ -27,7 +26,7 @@ var dumpBytes = false // If true, print the remaining bytes in the input buffer 
 // Init installs the debugging facility. If this file is not compiled in the
 // package, the tests in codec_test.go are no-ops.
 func init() {
-	debugFunc = Debug
+	debugFunc = func(tc *typeContext, r io.Reader) { debug(tc, r) }
 }
 
 var (
@@ -164,8 +163,8 @@ func (deb *debugger) dump(format string, args ...interface{}) {
 
 // Debug prints a human-readable representation of the gob data read from r.
 // It is a no-op unless debugging was enabled when the package was built.
-func Debug(r io.Reader) {
-	err := debug(r)
+func Debug(enc *Encoder, r io.Reader) {
+	err := debug(enc.tc, r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "gob debug: %s\n", err)
 	}
@@ -173,14 +172,14 @@ func Debug(r io.Reader) {
 
 // debug implements Debug, but catches panics and returns
 // them as errors to be printed by Debug.
-func debug(r io.Reader) (err error) {
+func debug(tc *typeContext, r io.Reader) (err error) {
 	defer catchError(&err)
 	fmt.Fprintln(os.Stderr, "Start of debugging")
 	deb := &debugger{
 		r:        newPeekReader(r),
 		wireType: make(map[typeId]*wireType),
 		tmp:      make([]byte, 16),
-		tc:       newTypeContext(),
+		tc:       tc,
 	}
 	if b, ok := r.(*bytes.Buffer); ok {
 		deb.remain = b.Len()

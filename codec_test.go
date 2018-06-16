@@ -1335,13 +1335,14 @@ func TestDebugSingleton(t *testing.T) {
 	}
 	b := new(bytes.Buffer)
 	// Accumulate a number of values and print them out all at once.
+	enc := NewEncoder(b)
 	for _, x := range singletons {
-		err := NewEncoder(b).Encode(x)
+		err := enc.Encode(x)
 		if err != nil {
 			t.Fatal("encode:", err)
 		}
 	}
-	debugFunc(b)
+	debugFunc(enc.tc, b)
 }
 
 // A type that won't be defined in the gob until we send it in an interface value.
@@ -1383,7 +1384,8 @@ func TestDebugStruct(t *testing.T) {
 	Register(OnTheFly{})
 	dt := newDT()
 	b := new(bytes.Buffer)
-	err := NewEncoder(b).Encode(dt)
+	enc := NewEncoder(b)
+	err := enc.Encode(dt)
 	if err != nil {
 		t.Fatal("encode:", err)
 	}
@@ -1393,7 +1395,7 @@ func TestDebugStruct(t *testing.T) {
 	if err != nil {
 		t.Error("decode:", err)
 	}
-	debugFunc(debugBuffer)
+	debugFunc(enc.tc, debugBuffer)
 }
 
 func encFuzzDec(rng *rand.Rand, in interface{}) error {
