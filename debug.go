@@ -310,7 +310,7 @@ func (deb *debugger) common() CommonType {
 			errorf("corrupted CommonType, delta is %d fieldNum is %d", delta, fieldNum)
 		}
 	}
-	return CommonType{name, id, deb.tc}
+	return CommonType{name, id}
 }
 
 // uint returns the unsigned int at the input point, as a uint (not uint64).

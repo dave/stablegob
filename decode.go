@@ -1042,9 +1042,9 @@ func (dec *Decoder) typeString(remoteId typeId) string {
 	defer dec.tc.typeLock.Unlock()
 	if t := dec.tc.idToType[remoteId]; t != nil {
 		// globally known type.
-		return t.string()
+		return t.string(dec.tc)
 	}
-	return dec.wireType[remoteId].string()
+	return dec.wireType[remoteId].string(dec.tc)
 }
 
 // compileSingle compiles the decoder engine for a non-struct top-level value, including

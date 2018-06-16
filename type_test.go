@@ -53,15 +53,15 @@ func TestReregistration(t *testing.T) {
 	tc := newTypeContext()
 	newtyp := tc.getTypeUnlocked("int", reflect.TypeOf(int(0)))
 	if newtyp != tInt.gobType(tc) {
-		t.Errorf("reregistration of %s got new type", newtyp.string())
+		t.Errorf("reregistration of %s got new type", newtyp.string(tc))
 	}
 	newtyp = tc.getTypeUnlocked("uint", reflect.TypeOf(uint(0)))
 	if newtyp != tUint.gobType(tc) {
-		t.Errorf("reregistration of %s got new type", newtyp.string())
+		t.Errorf("reregistration of %s got new type", newtyp.string(tc))
 	}
 	newtyp = tc.getTypeUnlocked("string", reflect.TypeOf("hello"))
 	if newtyp != tString.gobType(tc) {
-		t.Errorf("reregistration of %s got new type", newtyp.string())
+		t.Errorf("reregistration of %s got new type", newtyp.string(tc))
 	}
 }
 
@@ -83,7 +83,7 @@ func TestArrayType(t *testing.T) {
 	if a3int == a3bool {
 		t.Errorf("registration of [3]bool creates same type as [3]int")
 	}
-	str := a3bool.string()
+	str := a3bool.string(tc)
 	expected := "[3]bool"
 	if str != expected {
 		t.Errorf("array printed as %q; expected %q", str, expected)
@@ -104,7 +104,7 @@ func TestSliceType(t *testing.T) {
 	if sbool == sint {
 		t.Errorf("registration of []bool creates same type as []int")
 	}
-	str := sbool.string()
+	str := sbool.string(tc)
 	expected := "[]bool"
 	if str != expected {
 		t.Errorf("slice printed as %q; expected %q", str, expected)
@@ -125,7 +125,7 @@ func TestMapType(t *testing.T) {
 	if mapStringBool == mapStringInt {
 		t.Errorf("registration of map[string]bool creates same type as map[string]int")
 	}
-	str := mapStringBool.string()
+	str := mapStringBool.string(tc)
 	expected := "map[string]bool"
 	if str != expected {
 		t.Errorf("map printed as %q; expected %q", str, expected)
@@ -152,7 +152,7 @@ type Foo struct {
 func TestStructType(t *testing.T) {
 	tc := newTypeContext()
 	sstruct := tc.getTypeUnlocked("Foo", reflect.TypeOf(Foo{}))
-	str := sstruct.string()
+	str := sstruct.string(tc)
 	// If we can print it correctly, we built it correctly.
 	expected := "Foo = struct { A int; B int; C string; D bytes; E float; F float; G Bar = struct { X string; }; H Bar; I Foo; }"
 	if str != expected {

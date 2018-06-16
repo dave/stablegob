@@ -230,9 +230,8 @@ type gobType interface {
 	id() typeId
 	setId(id typeId)
 	name() string
-	string() string // not public; only for debugging
-	safeString(seen map[typeId]bool) string
-	context() *typeContext
+	string(tc *typeContext) string // not public; only for debugging
+	safeString(tc *typeContext, seen map[typeId]bool) string
 }
 
 func (tc *typeContext) setTypeId(typ gobType) {
@@ -257,7 +256,7 @@ func (t typeId) string(tc *typeContext) string {
 	if t.gobType(tc) == nil {
 		return "<nil>"
 	}
-	return t.gobType(tc).string()
+	return t.gobType(tc).string(tc)
 }
 
 // Name returns the name of the type associated with the typeId.
@@ -275,21 +274,16 @@ func (t typeId) name(tc *typeContext) string {
 type CommonType struct {
 	Name string
 	Id   typeId
-	tc   *typeContext
 }
 
 func (t *CommonType) id() typeId { return t.Id }
 
 func (t *CommonType) setId(id typeId) { t.Id = id }
 
-func (t *CommonType) string() string { return t.Name }
+func (t *CommonType) string(tc *typeContext) string { return t.Name }
 
-func (t *CommonType) safeString(seen map[typeId]bool) string {
+func (t *CommonType) safeString(tc *typeContext, seen map[typeId]bool) string {
 	return t.Name
-}
-
-func (t *CommonType) context() *typeContext {
-	return t.tc
 }
 
 func (t *CommonType) name() string { return t.Name }
@@ -334,7 +328,7 @@ type arrayType struct {
 }
 
 func (tc *typeContext) newArrayType(name string) *arrayType {
-	a := &arrayType{CommonType{Name: name, tc: tc}, 0, 0}
+	a := &arrayType{CommonType{Name: name}, 0, 0}
 	return a
 }
 
@@ -345,15 +339,15 @@ func (a *arrayType) init(tc *typeContext, elem gobType, len int) {
 	a.Len = len
 }
 
-func (a *arrayType) safeString(seen map[typeId]bool) string {
+func (a *arrayType) safeString(tc *typeContext, seen map[typeId]bool) string {
 	if seen[a.Id] {
 		return a.Name
 	}
 	seen[a.Id] = true
-	return fmt.Sprintf("[%d]%s", a.Len, a.Elem.gobType(a.tc).safeString(seen))
+	return fmt.Sprintf("[%d]%s", a.Len, a.Elem.gobType(tc).safeString(tc, seen))
 }
 
-func (a *arrayType) string() string { return a.safeString(make(map[typeId]bool)) }
+func (a *arrayType) string(tc *typeContext) string { return a.safeString(tc, make(map[typeId]bool)) }
 
 // GobEncoder type (something that implements the GobEncoder interface)
 type gobEncoderType struct {
@@ -361,16 +355,16 @@ type gobEncoderType struct {
 }
 
 func (tc *typeContext) newGobEncoderType(name string) *gobEncoderType {
-	g := &gobEncoderType{CommonType{Name: name, tc: tc}}
+	g := &gobEncoderType{CommonType{Name: name}}
 	tc.setTypeId(g)
 	return g
 }
 
-func (g *gobEncoderType) safeString(seen map[typeId]bool) string {
+func (g *gobEncoderType) safeString(tc *typeContext, seen map[typeId]bool) string {
 	return g.Name
 }
 
-func (g *gobEncoderType) string() string { return g.Name }
+func (g *gobEncoderType) string(tc *typeContext) string { return g.Name }
 
 // Map type
 type mapType struct {
@@ -380,7 +374,7 @@ type mapType struct {
 }
 
 func (tc *typeContext) newMapType(name string) *mapType {
-	m := &mapType{CommonType{Name: name, tc: tc}, 0, 0}
+	m := &mapType{CommonType{Name: name}, 0, 0}
 	return m
 }
 
@@ -391,17 +385,17 @@ func (m *mapType) init(tc *typeContext, key, elem gobType) {
 	m.Elem = elem.id()
 }
 
-func (m *mapType) safeString(seen map[typeId]bool) string {
+func (m *mapType) safeString(tc *typeContext, seen map[typeId]bool) string {
 	if seen[m.Id] {
 		return m.Name
 	}
 	seen[m.Id] = true
-	key := m.Key.gobType(m.tc).safeString(seen)
-	elem := m.Elem.gobType(m.tc).safeString(seen)
+	key := m.Key.gobType(tc).safeString(tc, seen)
+	elem := m.Elem.gobType(tc).safeString(tc, seen)
 	return fmt.Sprintf("map[%s]%s", key, elem)
 }
 
-func (m *mapType) string() string { return m.safeString(make(map[typeId]bool)) }
+func (m *mapType) string(tc *typeContext) string { return m.safeString(tc, make(map[typeId]bool)) }
 
 // Slice type
 type sliceType struct {
@@ -410,7 +404,7 @@ type sliceType struct {
 }
 
 func (tc *typeContext) newSliceType(name string) *sliceType {
-	s := &sliceType{CommonType{Name: name, tc: tc}, 0}
+	s := &sliceType{CommonType{Name: name}, 0}
 	return s
 }
 
@@ -425,15 +419,15 @@ func (s *sliceType) init(tc *typeContext, elem gobType) {
 	s.Elem = elem.id()
 }
 
-func (s *sliceType) safeString(seen map[typeId]bool) string {
+func (s *sliceType) safeString(tc *typeContext, seen map[typeId]bool) string {
 	if seen[s.Id] {
 		return s.Name
 	}
 	seen[s.Id] = true
-	return fmt.Sprintf("[]%s", s.Elem.gobType(s.tc).safeString(seen))
+	return fmt.Sprintf("[]%s", s.Elem.gobType(tc).safeString(tc, seen))
 }
 
-func (s *sliceType) string() string { return s.safeString(make(map[typeId]bool)) }
+func (s *sliceType) string(tc *typeContext) string { return s.safeString(tc, make(map[typeId]bool)) }
 
 // Struct type
 type fieldType struct {
@@ -446,7 +440,7 @@ type structType struct {
 	Field []*fieldType
 }
 
-func (s *structType) safeString(seen map[typeId]bool) string {
+func (s *structType) safeString(tc *typeContext, seen map[typeId]bool) string {
 	if s == nil {
 		return "<nil>"
 	}
@@ -456,16 +450,16 @@ func (s *structType) safeString(seen map[typeId]bool) string {
 	seen[s.Id] = true
 	str := s.Name + " = struct { "
 	for _, f := range s.Field {
-		str += fmt.Sprintf("%s %s; ", f.Name, f.Id.gobType(s.tc).safeString(seen))
+		str += fmt.Sprintf("%s %s; ", f.Name, f.Id.gobType(tc).safeString(tc, seen))
 	}
 	str += "}"
 	return str
 }
 
-func (s *structType) string() string { return s.safeString(make(map[typeId]bool)) }
+func (s *structType) string(tc *typeContext) string { return s.safeString(tc, make(map[typeId]bool)) }
 
 func (tc *typeContext) newStructType(name string) *structType {
-	s := &structType{CommonType{Name: name, tc: tc}, nil}
+	s := &structType{CommonType{Name: name}, nil}
 	// For historical reasons we set the id here rather than init.
 	// See the comment in newTypeObject for details.
 	tc.setTypeId(s)
@@ -659,7 +653,7 @@ func (tc *typeContext) bootstrapType(name string, e interface{}, expect typeId) 
 	if present {
 		panic("bootstrap type already present: " + name + ", " + rt.String())
 	}
-	typ := &CommonType{Name: name, tc: tc}
+	typ := &CommonType{Name: name}
 	tc.types[rt] = typ
 	tc.setTypeId(typ)
 	tc.checkId(expect, tc.nextId)
@@ -688,7 +682,7 @@ type wireType struct {
 	TextMarshalerT   *gobEncoderType
 }
 
-func (w *wireType) string() string {
+func (w *wireType) string(tc *typeContext) string {
 	const unknown = "unknown type"
 	if w == nil {
 		return unknown
