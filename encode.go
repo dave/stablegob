@@ -376,8 +376,10 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 	state.fieldnum = -1
 	state.sendZero = true
 	keyValues := mv.MapKeys()
+
 	keyBuf := &encBuffer{}
-	keyState := enc.newEncoderState(keyBuf)
+	keyEnc := NewEncoder(keyBuf) // We need a new encoder to prevent types from being registered in the wrong order
+	keyState := keyEnc.newEncoderState(keyBuf)
 
 	// encode the keys and buffer the results
 	var keys []valueAndBytes
@@ -398,7 +400,7 @@ func (enc *Encoder) encodeMap(b *encBuffer, mv reflect.Value, keyOp, elemOp encO
 
 	state.encodeUint(uint64(len(keyValues)))
 	for _, key := range keys {
-		b.Write(key.bytes)
+		encodeReflectValue(state, key.value, keyOp, keyIndir)
 		encodeReflectValue(state, mv.MapIndex(key.value), elemOp, elemIndir)
 	}
 	enc.freeEncoderState(state)
