@@ -33,6 +33,7 @@ type Decoder struct {
 	freeList     *decoderState                           // list of free decoderStates; avoids reallocation
 	countBuf     []byte                                  // used for decoding integers while parsing messages
 	err          error
+	tc           *typeContext
 }
 
 // NewDecoder returns a new decoder that reads from the io.Reader.
@@ -40,6 +41,7 @@ type Decoder struct {
 // bufio.Reader.
 func NewDecoder(r io.Reader) *Decoder {
 	dec := new(Decoder)
+	dec.tc = newTypeContext()
 	// We use the ability to read bytes as a plausible surrogate for buffering.
 	if _, ok := r.(io.ByteReader); !ok {
 		r = bufio.NewReader(r)

@@ -113,6 +113,7 @@ type debugger struct {
 	r              *peekReader
 	wireType       map[typeId]*wireType
 	tmp            []byte // scratch space for decoding uints.
+	tc             *typeContext
 }
 
 // dump prints the next nBytes of the input.
@@ -179,6 +180,7 @@ func debug(r io.Reader) (err error) {
 		r:        newPeekReader(r),
 		wireType: make(map[typeId]*wireType),
 		tmp:      make([]byte, 16),
+		tc:       newTypeContext(),
 	}
 	if b, ok := r.(*bytes.Buffer); ok {
 		deb.remain = b.Len()
@@ -309,7 +311,7 @@ func (deb *debugger) common() CommonType {
 			errorf("corrupted CommonType, delta is %d fieldNum is %d", delta, fieldNum)
 		}
 	}
-	return CommonType{name, id}
+	return CommonType{name, id, deb.tc}
 }
 
 // uint returns the unsigned int at the input point, as a uint (not uint64).
@@ -452,7 +454,7 @@ func (deb *debugger) singletonValue(indent tab, id typeId) {
 	deb.dump("Singleton value")
 	// is it a builtin type?
 	wire := deb.wireType[id]
-	_, ok := builtinIdToType[id]
+	_, ok := deb.tc.builtinIdToType[id]
 	if !ok && wire == nil {
 		errorf("type id %d not defined", id)
 	}
@@ -550,7 +552,7 @@ func (deb *debugger) printWireType(indent tab, wire *wireType) {
 // FieldValue:
 //	builtinValue | ArrayValue | MapValue | SliceValue | StructValue | InterfaceValue
 func (deb *debugger) fieldValue(indent tab, id typeId) {
-	_, ok := builtinIdToType[id]
+	_, ok := deb.tc.builtinIdToType[id]
 	if ok {
 		if id == tInterface {
 			deb.interfaceValue(indent)
@@ -663,8 +665,8 @@ func (deb *debugger) sliceValue(indent tab, wire *wireType) {
 // StructValue:
 //	(uint(fieldDelta) FieldValue)*
 func (deb *debugger) structValue(indent tab, id typeId) {
-	deb.dump("Start of struct value of %q id=%d\n<<\n", id.name(), id)
-	fmt.Fprintf(os.Stderr, "%s%s struct {\n", indent, id.name())
+	deb.dump("Start of struct value of %q id=%d\n<<\n", id.name(deb.tc), id)
+	fmt.Fprintf(os.Stderr, "%s%s struct {\n", indent, id.name(deb.tc))
 	wire, ok := deb.wireType[id]
 	if !ok {
 		errorf("type id %d not defined", id)
@@ -686,16 +688,16 @@ func (deb *debugger) structValue(indent tab, id typeId) {
 		deb.fieldValue(indent+1, strct.Field[fieldNum].Id)
 	}
 	indent--
-	fmt.Fprintf(os.Stderr, "%s} // end %s struct\n", indent, id.name())
-	deb.dump(">> End of struct value of type %d %q", id, id.name())
+	fmt.Fprintf(os.Stderr, "%s} // end %s struct\n", indent, id.name(deb.tc))
+	deb.dump(">> End of struct value of type %d %q", id, id.name(deb.tc))
 }
 
 // GobEncoderValue:
 //	uint(n) byte*n
 func (deb *debugger) gobEncoderValue(indent tab, id typeId) {
 	len := deb.uint64()
-	deb.dump("GobEncoder value of %q id=%d, length %d\n", id.name(), id, len)
-	fmt.Fprintf(os.Stderr, "%s%s (implements GobEncoder)\n", indent, id.name())
+	deb.dump("GobEncoder value of %q id=%d, length %d\n", id.name(deb.tc), id, len)
+	fmt.Fprintf(os.Stderr, "%s%s (implements GobEncoder)\n", indent, id.name(deb.tc))
 	data := make([]byte, len)
 	_, err := deb.r.Read(data)
 	if err != nil {

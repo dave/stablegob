@@ -836,7 +836,7 @@ func (dec *Decoder) decOpFor(wireId typeId, rt reflect.Type, name string, inProg
 				break
 			}
 			var elemId typeId
-			if tt, ok := builtinIdToType[wireId]; ok {
+			if tt, ok := dec.tc.builtinIdToType[wireId]; ok {
 				elemId = tt.(*sliceType).Elem
 			} else {
 				elemId = dec.wireType[wireId].SliceT.Elem
@@ -893,7 +893,7 @@ func (dec *Decoder) decIgnoreOpFor(wireId typeId, inProgress map[typeId]*decOp) 
 		wire := dec.wireType[wireId]
 		switch {
 		case wire == nil:
-			errorf("bad data: undefined type %s", wireId.string())
+			errorf("bad data: undefined type %s", wireId.string(dec.tc))
 		case wire.ArrayT != nil:
 			elemId := wire.ArrayT.Elem
 			elemOp := dec.decIgnoreOpFor(elemId, inProgress)
@@ -935,7 +935,7 @@ func (dec *Decoder) decIgnoreOpFor(wireId typeId, inProgress map[typeId]*decOp) 
 		}
 	}
 	if op == nil {
-		errorf("bad data: ignore can't handle type %s", wireId.string())
+		errorf("bad data: ignore can't handle type %s", wireId.string(dec.tc))
 	}
 	return &op
 }
@@ -1024,7 +1024,7 @@ func (dec *Decoder) compatibleType(fr reflect.Type, fw typeId, inProgress map[re
 		}
 		// Extract and compare element types.
 		var sw *sliceType
-		if tt, ok := builtinIdToType[fw]; ok {
+		if tt, ok := dec.tc.builtinIdToType[fw]; ok {
 			sw, _ = tt.(*sliceType)
 		} else if wire != nil {
 			sw = wire.SliceT
@@ -1038,9 +1038,9 @@ func (dec *Decoder) compatibleType(fr reflect.Type, fw typeId, inProgress map[re
 
 // typeString returns a human-readable description of the type identified by remoteId.
 func (dec *Decoder) typeString(remoteId typeId) string {
-	typeLock.Lock()
-	defer typeLock.Unlock()
-	if t := idToType[remoteId]; t != nil {
+	dec.tc.typeLock.Lock()
+	defer dec.tc.typeLock.Unlock()
+	if t := dec.tc.idToType[remoteId]; t != nil {
 		// globally known type.
 		return t.string()
 	}
@@ -1092,7 +1092,7 @@ func (dec *Decoder) compileDec(remoteId typeId, ut *userTypeInfo) (engine *decEn
 	var wireStruct *structType
 	// Builtin types can come from global pool; the rest must be defined by the decoder.
 	// Also we know we're decoding a struct now, so the client must have sent one.
-	if t, ok := builtinIdToType[remoteId]; ok {
+	if t, ok := dec.tc.builtinIdToType[remoteId]; ok {
 		wireStruct, _ = t.(*structType)
 	} else {
 		wire := dec.wireType[remoteId]

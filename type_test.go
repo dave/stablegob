@@ -25,21 +25,22 @@ var basicTypes = []typeT{
 	{tString, "string"},
 }
 
-func getTypeUnlocked(name string, rt reflect.Type) gobType {
-	typeLock.Lock()
-	defer typeLock.Unlock()
-	t, err := getBaseType(name, rt)
+func (tc *typeContext) getTypeUnlocked(name string, rt reflect.Type) gobType {
+	tc.typeLock.Lock()
+	defer tc.typeLock.Unlock()
+	ty, err := tc.getBaseType(name, rt)
 	if err != nil {
 		panic("getTypeUnlocked: " + err.Error())
 	}
-	return t
+	return ty
 }
 
 // Sanity checks
 func TestBasic(t *testing.T) {
+	tc := newTypeContext()
 	for _, tt := range basicTypes {
-		if tt.id.string() != tt.str {
-			t.Errorf("checkType: expected %q got %s", tt.str, tt.id.string())
+		if tt.id.string(tc) != tt.str {
+			t.Errorf("checkType: expected %q got %s", tt.str, tt.id.string(tc))
 		}
 		if tt.id == 0 {
 			t.Errorf("id for %q is zero", tt.str)
@@ -49,34 +50,36 @@ func TestBasic(t *testing.T) {
 
 // Reregister some basic types to check registration is idempotent.
 func TestReregistration(t *testing.T) {
-	newtyp := getTypeUnlocked("int", reflect.TypeOf(int(0)))
-	if newtyp != tInt.gobType() {
+	tc := newTypeContext()
+	newtyp := tc.getTypeUnlocked("int", reflect.TypeOf(int(0)))
+	if newtyp != tInt.gobType(tc) {
 		t.Errorf("reregistration of %s got new type", newtyp.string())
 	}
-	newtyp = getTypeUnlocked("uint", reflect.TypeOf(uint(0)))
-	if newtyp != tUint.gobType() {
+	newtyp = tc.getTypeUnlocked("uint", reflect.TypeOf(uint(0)))
+	if newtyp != tUint.gobType(tc) {
 		t.Errorf("reregistration of %s got new type", newtyp.string())
 	}
-	newtyp = getTypeUnlocked("string", reflect.TypeOf("hello"))
-	if newtyp != tString.gobType() {
+	newtyp = tc.getTypeUnlocked("string", reflect.TypeOf("hello"))
+	if newtyp != tString.gobType(tc) {
 		t.Errorf("reregistration of %s got new type", newtyp.string())
 	}
 }
 
 func TestArrayType(t *testing.T) {
+	tc := newTypeContext()
 	var a3 [3]int
-	a3int := getTypeUnlocked("foo", reflect.TypeOf(a3))
-	newa3int := getTypeUnlocked("bar", reflect.TypeOf(a3))
+	a3int := tc.getTypeUnlocked("foo", reflect.TypeOf(a3))
+	newa3int := tc.getTypeUnlocked("bar", reflect.TypeOf(a3))
 	if a3int != newa3int {
 		t.Errorf("second registration of [3]int creates new type")
 	}
 	var a4 [4]int
-	a4int := getTypeUnlocked("goo", reflect.TypeOf(a4))
+	a4int := tc.getTypeUnlocked("goo", reflect.TypeOf(a4))
 	if a3int == a4int {
 		t.Errorf("registration of [3]int creates same type as [4]int")
 	}
 	var b3 [3]bool
-	a3bool := getTypeUnlocked("", reflect.TypeOf(b3))
+	a3bool := tc.getTypeUnlocked("", reflect.TypeOf(b3))
 	if a3int == a3bool {
 		t.Errorf("registration of [3]bool creates same type as [3]int")
 	}
@@ -88,15 +91,16 @@ func TestArrayType(t *testing.T) {
 }
 
 func TestSliceType(t *testing.T) {
+	tc := newTypeContext()
 	var s []int
-	sint := getTypeUnlocked("slice", reflect.TypeOf(s))
+	sint := tc.getTypeUnlocked("slice", reflect.TypeOf(s))
 	var news []int
-	newsint := getTypeUnlocked("slice1", reflect.TypeOf(news))
+	newsint := tc.getTypeUnlocked("slice1", reflect.TypeOf(news))
 	if sint != newsint {
 		t.Errorf("second registration of []int creates new type")
 	}
 	var b []bool
-	sbool := getTypeUnlocked("", reflect.TypeOf(b))
+	sbool := tc.getTypeUnlocked("", reflect.TypeOf(b))
 	if sbool == sint {
 		t.Errorf("registration of []bool creates same type as []int")
 	}
@@ -108,15 +112,16 @@ func TestSliceType(t *testing.T) {
 }
 
 func TestMapType(t *testing.T) {
+	tc := newTypeContext()
 	var m map[string]int
-	mapStringInt := getTypeUnlocked("map", reflect.TypeOf(m))
+	mapStringInt := tc.getTypeUnlocked("map", reflect.TypeOf(m))
 	var newm map[string]int
-	newMapStringInt := getTypeUnlocked("map1", reflect.TypeOf(newm))
+	newMapStringInt := tc.getTypeUnlocked("map1", reflect.TypeOf(newm))
 	if mapStringInt != newMapStringInt {
 		t.Errorf("second registration of map[string]int creates new type")
 	}
 	var b map[string]bool
-	mapStringBool := getTypeUnlocked("", reflect.TypeOf(b))
+	mapStringBool := tc.getTypeUnlocked("", reflect.TypeOf(b))
 	if mapStringBool == mapStringInt {
 		t.Errorf("registration of map[string]bool creates same type as map[string]int")
 	}
@@ -145,7 +150,8 @@ type Foo struct {
 }
 
 func TestStructType(t *testing.T) {
-	sstruct := getTypeUnlocked("Foo", reflect.TypeOf(Foo{}))
+	tc := newTypeContext()
+	sstruct := tc.getTypeUnlocked("Foo", reflect.TypeOf(Foo{}))
 	str := sstruct.string()
 	// If we can print it correctly, we built it correctly.
 	expected := "Foo = struct { A int; B int; C string; D bytes; E float; F float; G Bar = struct { X string; }; H Bar; I Foo; }"

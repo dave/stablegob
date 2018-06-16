@@ -21,6 +21,7 @@ type Encoder struct {
 	freeList   *encoderState           // list of free encoderStates; avoids reallocation
 	byteBuf    encBuffer               // buffer for top-level encoderState
 	err        error
+	tc         *typeContext
 }
 
 // Before we encode a message, we reserve space at the head of the
@@ -32,6 +33,7 @@ var spaceForLength = make([]byte, maxLength)
 // NewEncoder returns a new encoder that will transmit on the io.Writer.
 func NewEncoder(w io.Writer) *Encoder {
 	enc := new(Encoder)
+	enc.tc = newTypeContext()
 	enc.w = []io.Writer{w}
 	enc.sent = make(map[reflect.Type]typeId)
 	enc.countState = enc.newEncoderState(new(encBuffer))
@@ -93,7 +95,7 @@ func (enc *Encoder) sendActualType(w io.Writer, state *encoderState, ut *userTyp
 	if _, alreadySent := enc.sent[actual]; alreadySent {
 		return false
 	}
-	info, err := getTypeInfo(ut)
+	info, err := enc.tc.getTypeInfo(ut)
 	if err != nil {
 		enc.setError(err)
 		return
@@ -195,7 +197,7 @@ func (enc *Encoder) sendTypeDescriptor(w io.Writer, state *encoderState, ut *use
 		// a singleton basic type (int, []byte etc.) at top level. We don't
 		// need to send the type info but we do need to update enc.sent.
 		if !sent {
-			info, err := getTypeInfo(ut)
+			info, err := enc.tc.getTypeInfo(ut)
 			if err != nil {
 				enc.setError(err)
 				return
